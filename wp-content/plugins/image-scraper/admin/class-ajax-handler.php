@@ -62,11 +62,29 @@ class Ajax_Handler {
 			);
 		}
 
-		// Initialize Firecrawl API.
-		$api = new \Image_Scraper\Firecrawl_Api();
+		// Get scraping method from settings.
+		$options = get_option( 'image_scraper_settings' );
+		$method  = isset( $options['scraping_method'] ) ? $options['scraping_method'] : 'simple';
+
+		// Create scraper instance based on selected method.
+		if ( $method === 'firecrawl' ) {
+			// Check if API key is configured.
+			$api_key = isset( $options['firecrawl_api_key'] ) ? $options['firecrawl_api_key'] : '';
+			if ( empty( $api_key ) ) {
+				wp_send_json_error(
+					array( 'message' => __( 'Firecrawl API key not configured. Please configure it in settings or switch to Simple Mode.', 'image-scraper' ) )
+				);
+			}
+			
+			// Initialize Firecrawl API.
+			$scraper = new \Image_Scraper\Firecrawl_Api();
+		} else {
+			// Initialize HTML Scraper (Simple Mode).
+			$scraper = new \Image_Scraper\Html_Scraper();
+		}
 
 		// Scrape the URL.
-		$images = $api->scrape_url( $target_url, $target_class );
+		$images = $scraper->scrape_url( $target_url, $target_class );
 
 		// Check for errors.
 		if ( is_wp_error( $images ) ) {
@@ -95,6 +113,17 @@ class Ajax_Handler {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_send_json_error(
 				array( 'message' => __( 'You do not have permission to perform this action.', 'image-scraper' ) )
+			);
+		}
+
+		// Get scraping method from settings.
+		$options = get_option( 'image_scraper_settings' );
+		$method  = isset( $options['scraping_method'] ) ? $options['scraping_method'] : 'simple';
+
+		// Only validate if using Firecrawl.
+		if ( $method !== 'firecrawl' ) {
+			wp_send_json_error(
+				array( 'message' => __( 'API validation is only available when using Firecrawl method.', 'image-scraper' ) )
 			);
 		}
 

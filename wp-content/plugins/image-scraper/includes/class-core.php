@@ -55,6 +55,7 @@ class Core {
 		require_once IMAGE_SCRAPER_PLUGIN_DIR . 'includes/class-loader.php';
 		require_once IMAGE_SCRAPER_PLUGIN_DIR . 'includes/class-i18n.php';
 		require_once IMAGE_SCRAPER_PLUGIN_DIR . 'includes/class-firecrawl-api.php';
+		require_once IMAGE_SCRAPER_PLUGIN_DIR . 'includes/class-html-scraper.php';
 		require_once IMAGE_SCRAPER_PLUGIN_DIR . 'includes/class-media-importer.php';
 		require_once IMAGE_SCRAPER_PLUGIN_DIR . 'admin/class-admin.php';
 		require_once IMAGE_SCRAPER_PLUGIN_DIR . 'admin/class-settings.php';

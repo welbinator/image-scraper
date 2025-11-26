@@ -22,6 +22,7 @@ class Activator {
 	public static function activate() {
 		// Set default options if they don't exist.
 		$default_options = array(
+			'scraping_method'   => 'simple',
 			'firecrawl_api_key' => '',
 			'max_images'        => 50,
 			'timeout'           => 30,

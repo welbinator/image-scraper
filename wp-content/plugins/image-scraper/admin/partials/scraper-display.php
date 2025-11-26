@@ -10,21 +10,40 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-// Check if API key is set.
+// Check settings.
 $options = get_option( 'image_scraper_settings' );
+$method  = isset( $options['scraping_method'] ) ? $options['scraping_method'] : 'simple';
 $api_key = isset( $options['firecrawl_api_key'] ) ? $options['firecrawl_api_key'] : '';
 ?>
 
 <div class="wrap">
 	<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
 
-	<?php if ( empty( $api_key ) ) : ?>
+	<!-- Scraping Method Badge -->
+	<div class="notice notice-info inline" style="margin: 10px 0; display: flex; align-items: center; justify-content: space-between;">
+		<p style="margin: 0;">
+			<strong><?php esc_html_e( 'Current Scraping Method:', 'image-scraper' ); ?></strong>
+			<?php if ( $method === 'firecrawl' ) : ?>
+				<span class="dashicons dashicons-cloud" style="color: #2271b1;"></span>
+				<?php esc_html_e( 'Firecrawl API (Advanced)', 'image-scraper' ); ?>
+			<?php else : ?>
+				<span class="dashicons dashicons-html" style="color: #00a32a;"></span>
+				<?php esc_html_e( 'Simple Mode (Direct HTML)', 'image-scraper' ); ?>
+			<?php endif; ?>
+		</p>
+		<a href="<?php echo esc_url( admin_url( 'admin.php?page=image-scraper-settings' ) ); ?>" class="button button-small">
+			<?php esc_html_e( 'Change Method', 'image-scraper' ); ?>
+		</a>
+	</div>
+
+	<!-- API Key Warning for Firecrawl -->
+	<?php if ( $method === 'firecrawl' && empty( $api_key ) ) : ?>
 		<div class="notice notice-warning">
 			<p>
 				<?php
 				printf(
 					/* translators: %s: link to settings page */
-					esc_html__( 'Please configure your Firecrawl API key in %s before scraping images.', 'image-scraper' ),
+					esc_html__( 'Firecrawl API key is not configured. Please add your API key in %s or switch to Simple Mode.', 'image-scraper' ),
 					'<a href="' . esc_url( admin_url( 'admin.php?page=image-scraper-settings' ) ) . '">' . esc_html__( 'Settings', 'image-scraper' ) . '</a>'
 				);
 				?>
@@ -53,7 +72,7 @@ $api_key = isset( $options['firecrawl_api_key'] ) ? $options['firecrawl_api_key'
 								class="regular-text" 
 								placeholder="https://example.com"
 								required
-								<?php echo empty( $api_key ) ? 'disabled' : ''; ?>
+								<?php echo ( $method === 'firecrawl' && empty( $api_key ) ) ? 'disabled' : ''; ?>
 							/>
 							<p class="description">
 								<?php esc_html_e( 'Enter the URL of the webpage you want to scrape images from.', 'image-scraper' ); ?>
@@ -70,7 +89,7 @@ $api_key = isset( $options['firecrawl_api_key'] ) ? $options['firecrawl_api_key'
 									type="checkbox" 
 									id="target_class_toggle" 
 									name="target_class_toggle"
-									<?php echo empty( $api_key ) ? 'disabled' : ''; ?>
+									<?php echo ( $method === 'firecrawl' && empty( $api_key ) ) ? 'disabled' : ''; ?>
 								/>
 								<?php esc_html_e( 'Only scrape images with a specific CSS class', 'image-scraper' ); ?>
 							</label>
@@ -81,7 +100,7 @@ $api_key = isset( $options['firecrawl_api_key'] ) ? $options['firecrawl_api_key'
 									name="target_class" 
 									class="regular-text" 
 									placeholder="my-image-class or .my-image-class"
-									<?php echo empty( $api_key ) ? 'disabled' : ''; ?>
+									<?php echo ( $method === 'firecrawl' && empty( $api_key ) ) ? 'disabled' : ''; ?>
 								/>
 								<p class="description">
 									<?php esc_html_e( 'Enter the CSS class name (with or without the dot).', 'image-scraper' ); ?>
@@ -92,7 +111,7 @@ $api_key = isset( $options['firecrawl_api_key'] ) ? $options['firecrawl_api_key'
 				</table>
 
 				<?php 
-				$button_disabled = empty( $api_key );
+				$button_disabled = ( $method === 'firecrawl' && empty( $api_key ) );
 				submit_button( 
 					__( 'Start Scraping', 'image-scraper' ), 
 					'primary', 

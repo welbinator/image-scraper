@@ -52,7 +52,24 @@ class Settings {
 			)
 		);
 
-		// Add settings section.
+		// Add scraping method section.
+		add_settings_section(
+			'image_scraper_method_section',
+			__( 'Scraping Method', 'image-scraper' ),
+			array( $this, 'method_section_callback' ),
+			'image-scraper-settings'
+		);
+
+		// Add scraping method field.
+		add_settings_field(
+			'scraping_method',
+			__( 'Scraping Method', 'image-scraper' ),
+			array( $this, 'scraping_method_field_callback' ),
+			'image-scraper-settings',
+			'image_scraper_method_section'
+		);
+
+		// Add settings section for Firecrawl.
 		add_settings_section(
 			'image_scraper_api_section',
 			__( 'Firecrawl API Configuration', 'image-scraper' ),
@@ -105,6 +122,12 @@ class Settings {
 	public function sanitize_settings( $input ) {
 		$sanitized = array();
 
+		// Sanitize scraping method.
+		if ( isset( $input['scraping_method'] ) ) {
+			$method = sanitize_text_field( $input['scraping_method'] );
+			$sanitized['scraping_method'] = in_array( $method, array( 'simple', 'firecrawl' ), true ) ? $method : 'simple';
+		}
+
 		// Sanitize API key.
 		if ( isset( $input['firecrawl_api_key'] ) ) {
 			$sanitized['firecrawl_api_key'] = sanitize_text_field( $input['firecrawl_api_key'] );
@@ -128,10 +151,61 @@ class Settings {
 	}
 
 	/**
+	 * Method section callback.
+	 */
+	public function method_section_callback() {
+		echo '<p>' . esc_html__( 'Choose how to scrape images from websites.', 'image-scraper' ) . '</p>';
+	}
+
+	/**
+	 * Scraping method field callback.
+	 */
+	public function scraping_method_field_callback() {
+		$options = get_option( 'image_scraper_settings' );
+		$method  = isset( $options['scraping_method'] ) ? $options['scraping_method'] : 'simple';
+		?>
+		<fieldset>
+			<label>
+				<input 
+					type="radio" 
+					name="image_scraper_settings[scraping_method]" 
+					value="simple"
+					<?php checked( $method, 'simple' ); ?>
+				/>
+				<strong><?php esc_html_e( 'Simple Mode (Recommended)', 'image-scraper' ); ?></strong>
+				<p class="description" style="margin-left: 25px;">
+					<?php esc_html_e( 'Direct HTML scraping - fast, free, and works for most websites. No API key required.', 'image-scraper' ); ?>
+				</p>
+			</label>
+			<br><br>
+			<label>
+				<input 
+					type="radio" 
+					name="image_scraper_settings[scraping_method]" 
+					value="firecrawl"
+					<?php checked( $method, 'firecrawl' ); ?>
+				/>
+				<strong><?php esc_html_e( 'Firecrawl API', 'image-scraper' ); ?></strong>
+				<p class="description" style="margin-left: 25px;">
+					<?php esc_html_e( 'Advanced scraping for JavaScript-heavy sites, SPAs, and protected content. Requires API key.', 'image-scraper' ); ?>
+				</p>
+			</label>
+		</fieldset>
+		<?php
+	}
+
+	/**
 	 * API section callback.
 	 */
 	public function api_section_callback() {
-		echo '<p>' . esc_html__( 'Configure your Firecrawl API credentials. Get your API key from', 'image-scraper' ) . ' <a href="https://firecrawl.dev" target="_blank">firecrawl.dev</a>.</p>';
+		$options = get_option( 'image_scraper_settings' );
+		$method  = isset( $options['scraping_method'] ) ? $options['scraping_method'] : 'simple';
+		
+		if ( $method === 'simple' ) {
+			echo '<p class="description">' . esc_html__( 'Firecrawl API is not required when using Simple Mode.', 'image-scraper' ) . '</p>';
+		} else {
+			echo '<p>' . esc_html__( 'Configure your Firecrawl API credentials. Get your API key from', 'image-scraper' ) . ' <a href="https://firecrawl.dev" target="_blank">firecrawl.dev</a>.</p>';
+		}
 	}
 
 	/**
