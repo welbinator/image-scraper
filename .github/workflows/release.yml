@@ -1,0 +1,49 @@
+name: Create Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release Tag'
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Create temporary directory
+      run: |
+        mkdir temp_dir
+
+    - name: Copy files to temporary directory
+      run: |
+        find . -maxdepth 1 -not -name 'temp_dir' -not -name '.' -not -name '.git' -not -name '.github' -exec cp -r {} temp_dir/ \;
+
+    - name: Rename directory
+      run: |
+        mv temp_dir image-scraper
+
+    - name: Zip the folder
+      run: |
+        zip -r image-scraper-${{ github.event.inputs.tag }}.zip image-scraper \
+        -x "*.git/*" "*.github/*" \
+        "image-scraper/composer.json" "image-scraper/composer.lock" \
+        "image-scraper/package.json" "image-scraper/package-lock.json" \
+        "image-scraper/phpstan.neon" "image-scraper/phpstan-baseline.neon" \
+        "image-scraper/postcss.config.js" "image-scraper/tailwind.config.js" \
+        "image-scraper/gutenberg-market.php" "image-scraper/.gitignore" \
+        "image-scraper/webpack.config.js" "image-scraper/src/*"
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: image-scraper-${{ github.event.inputs.tag }}.zip
+        tag_name: ${{ github.event.inputs.tag }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+permissions:
+  contents: write
