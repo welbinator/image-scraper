@@ -184,6 +184,58 @@
 				if (image.width && image.height) {
 					html += '<p class="image-dimensions">' + image.width + ' × ' + image.height + 'px</p>';
 				}
+				html += '<button type="button" class="button button-small edit-image-settings" data-index="' + index + '">Edit Settings</button>';
+				
+				// Individual settings form (hidden by default)
+				html += '<div class="individual-settings" style="display: none;">';
+				html += '<h4>Individual Settings</h4>';
+				html += '<table class="form-table-compact">';
+				
+				// Filename prefix
+				html += '<tr>';
+				html += '<td><label>Filename:</label></td>';
+				html += '<td><input type="text" class="img-filename" placeholder="Leave empty to use original" /></td>';
+				html += '</tr>';
+				
+				// Alt text
+				html += '<tr>';
+				html += '<td><label>Alt Text:</label></td>';
+				html += '<td><input type="text" class="img-alt" placeholder="Leave empty for default" /></td>';
+				html += '</tr>';
+				
+				// Title
+				html += '<tr>';
+				html += '<td><label>Title:</label></td>';
+				html += '<td><input type="text" class="img-title" placeholder="Leave empty for default" /></td>';
+				html += '</tr>';
+				
+				// Format
+				html += '<tr>';
+				html += '<td><label>Format:</label></td>';
+				html += '<td><select class="img-format">';
+				html += '<option value="">Keep Original</option>';
+				html += '<option value="webp">WebP</option>';
+				html += '<option value="jpeg">JPEG</option>';
+				html += '<option value="png">PNG</option>';
+				html += '</select></td>';
+				html += '</tr>';
+				
+				// Max width
+				html += '<tr>';
+				html += '<td><label>Max Width:</label></td>';
+				html += '<td><input type="number" class="img-max-width small-text" placeholder="px" min="1" /></td>';
+				html += '</tr>';
+				
+				// Max filesize
+				html += '<tr>';
+				html += '<td><label>Max Size:</label></td>';
+				html += '<td><input type="number" class="img-max-size small-text" placeholder="KB" min="1" /></td>';
+				html += '</tr>';
+				
+				html += '</table>';
+				html += '<button type="button" class="button button-small close-settings">Close</button>';
+				html += '</div>';
+				
 				html += '</div>';
 			});
 
@@ -232,6 +284,35 @@
 		});
 
 		/**
+		 * Toggle individual image settings.
+		 */
+		$(document).on('click', '.edit-image-settings', function() {
+			var $item = $(this).closest('.scraped-image-item');
+			var $settings = $item.find('.individual-settings');
+			
+			// Close other open settings
+			$('.individual-settings').not($settings).slideUp();
+			$('.edit-image-settings').not(this).text('Edit Settings');
+			
+			// Toggle this one
+			$settings.slideToggle();
+			if ($settings.is(':visible')) {
+				$(this).text('Close Settings');
+			} else {
+				$(this).text('Edit Settings');
+			}
+		});
+
+		/**
+		 * Close individual settings.
+		 */
+		$(document).on('click', '.close-settings', function() {
+			var $item = $(this).closest('.scraped-image-item');
+			$item.find('.individual-settings').slideUp();
+			$item.find('.edit-image-settings').text('Edit Settings');
+		});
+
+		/**
 		 * Update selected image count.
 		 */
 		function updateSelectedCount() {
@@ -263,12 +344,34 @@
 				return;
 			}
 
-			// Get only selected images.
+			// Get selected images with their individual settings.
 			var selectedImages = [];
 			$('.image-select-checkbox:checked').each(function() {
 				var index = $(this).data('index');
+				var $item = $(this).closest('.scraped-image-item');
+				
 				if (scrapedImages[index]) {
-					selectedImages.push(scrapedImages[index]);
+					var image = $.extend({}, scrapedImages[index]);
+					
+					// Get individual settings for this image (if any)
+					var individualFilename = $item.find('.img-filename').val().trim();
+					var individualAlt = $item.find('.img-alt').val().trim();
+					var individualTitle = $item.find('.img-title').val().trim();
+					var individualFormat = $item.find('.img-format').val();
+					var individualMaxWidth = $item.find('.img-max-width').val();
+					var individualMaxSize = $item.find('.img-max-size').val();
+					
+					// Store individual settings in the image object
+					image.individual_settings = {
+						filename: individualFilename,
+						alt: individualAlt,
+						title: individualTitle,
+						format: individualFormat,
+						max_width: individualMaxWidth,
+						max_size: individualMaxSize
+					};
+					
+					selectedImages.push(image);
 				}
 			});
 
@@ -283,7 +386,7 @@
 			var $results = $('#scraping-results');
 			var $finalResults = $('#import-results');
 
-			// Gather options.
+			// Gather global/default options.
 			var options = {
 				convert_format: $('#convert_format_toggle').is(':checked') ? $('#convert_format').val() : '',
 				max_width: $('#max_width').val() || '',

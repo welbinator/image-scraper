@@ -171,13 +171,13 @@ class Ajax_Handler {
 			);
 		}
 
-		// Get options.
+		// Get global/default options.
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 		$options_json = isset( $_POST['options'] ) ? wp_unslash( $_POST['options'] ) : '';
 		$options_raw  = json_decode( wp_json_encode( $options_json ), true );
 
-		// Sanitize options.
-		$options = array(
+		// Sanitize global options.
+		$global_options = array(
 			'convert_format'  => isset( $options_raw['convert_format'] ) ? sanitize_text_field( $options_raw['convert_format'] ) : '',
 			'max_width'       => isset( $options_raw['max_width'] ) ? absint( $options_raw['max_width'] ) : 0,
 			'max_filesize'    => isset( $options_raw['max_filesize'] ) ? absint( $options_raw['max_filesize'] ) : 0,
@@ -186,8 +186,38 @@ class Ajax_Handler {
 			'image_title'     => isset( $options_raw['image_title'] ) ? sanitize_text_field( $options_raw['image_title'] ) : '',
 		);
 
-		// Initialize Media Importer.
-		$importer = new \Image_Scraper\Media_Importer( $options );
+		// Process each image with merged options (individual settings override global).
+		foreach ( $images as $index => &$image ) {
+			if ( isset( $image['individual_settings'] ) && is_array( $image['individual_settings'] ) ) {
+				$individual = $image['individual_settings'];
+				
+				// Merge individual settings into the image - individual overrides global.
+				if ( ! empty( $individual['filename'] ) ) {
+					$image['custom_filename'] = sanitize_file_name( $individual['filename'] );
+				}
+				if ( ! empty( $individual['alt'] ) ) {
+					$image['custom_alt'] = sanitize_text_field( $individual['alt'] );
+				}
+				if ( ! empty( $individual['title'] ) ) {
+					$image['custom_title'] = sanitize_text_field( $individual['title'] );
+				}
+				if ( ! empty( $individual['format'] ) ) {
+					$image['custom_format'] = sanitize_text_field( $individual['format'] );
+				}
+				if ( ! empty( $individual['max_width'] ) ) {
+					$image['custom_max_width'] = absint( $individual['max_width'] );
+				}
+				if ( ! empty( $individual['max_size'] ) ) {
+					$image['custom_max_size'] = absint( $individual['max_size'] );
+				}
+				
+				// Clean up the individual_settings key.
+				unset( $image['individual_settings'] );
+			}
+		}
+
+		// Initialize Media Importer with global options.
+		$importer = new \Image_Scraper\Media_Importer( $global_options );
 
 		// Import images.
 		$result = $importer->import_images( $images );
