@@ -3,11 +3,11 @@
  * Plugin Name:       Image Scraper
  * Plugin URI:        https://github.com/yourusername/image-scraper
  * Description:       Scrape images from websites using Firecrawl API and add them to your WordPress media library.
- * Version:           1.0.0
+ * Version:           1.1.0
  * Requires at least: 5.8
  * Requires PHP:      7.4
- * Author:            Your Name
- * Author URI:        https://yourwebsite.com
+ * Author:            James Welbes
+ * Author URI:        https://jameswelbes.com
  * License:           GPL v2 or later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       image-scraper
@@ -26,7 +26,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Plugin version.
  */
-define( 'IMAGE_SCRAPER_VERSION', '1.0.0' );
+define( 'IMAGE_SCRAPER_VERSION', '1.1.0' );
 
 /**
  * Plugin directory path.

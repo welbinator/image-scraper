@@ -175,12 +175,17 @@ class Media_Importer {
 			);
 		}
 
+		// Check for individual max_width setting, otherwise use global.
+		$max_width = isset( $image['custom_max_width'] ) && $image['custom_max_width'] > 0 
+			? $image['custom_max_width'] 
+			: $this->options['max_width'];
+
 		// Resize if max_width is set.
-		if ( ! empty( $this->options['max_width'] ) && $this->options['max_width'] > 0 ) {
+		if ( ! empty( $max_width ) && $max_width > 0 ) {
 			$size = $editor->get_size();
 			
-			if ( $size['width'] > $this->options['max_width'] ) {
-				$editor->resize( $this->options['max_width'], null, false );
+			if ( $size['width'] > $max_width ) {
+				$editor->resize( $max_width, null, false );
 			}
 		}
 
@@ -188,8 +193,8 @@ class Media_Importer {
 		$quality = 90;
 		$editor->set_quality( $quality );
 
-		// Determine output format.
-		$output_format = $this->get_output_format( $file_path );
+		// Determine output format (check for individual format setting).
+		$output_format = $this->get_output_format( $file_path, $image );
 
 		// Save to temp file.
 		$temp_output = wp_tempnam();
@@ -201,9 +206,14 @@ class Media_Importer {
 
 		$output_file = $saved['path'];
 
+		// Check for individual max_size setting, otherwise use global.
+		$max_filesize = isset( $image['custom_max_size'] ) && $image['custom_max_size'] > 0 
+			? $image['custom_max_size'] 
+			: $this->options['max_filesize'];
+
 		// Compress to max filesize if needed.
-		if ( ! empty( $this->options['max_filesize'] ) && $this->options['max_filesize'] > 0 ) {
-			$output_file = $this->compress_to_filesize( $output_file, $this->options['max_filesize'], $output_format );
+		if ( ! empty( $max_filesize ) && $max_filesize > 0 ) {
+			$output_file = $this->compress_to_filesize( $output_file, $max_filesize, $output_format );
 			
 			if ( is_wp_error( $output_file ) ) {
 				@unlink( $temp_output );
@@ -291,12 +301,21 @@ class Media_Importer {
 	 * Get output format based on options.
 	 *
 	 * @param string $original_file Original file path.
+	 * @param array  $image         Image data (may contain custom_format).
 	 * @return string Mime type.
 	 */
-	private function get_output_format( $original_file ) {
+	private function get_output_format( $original_file, $image = array() ) {
+		// Check for individual format setting first.
+		$format = '';
+		if ( isset( $image['custom_format'] ) && ! empty( $image['custom_format'] ) ) {
+			$format = $image['custom_format'];
+		} elseif ( ! empty( $this->options['convert_format'] ) ) {
+			$format = $this->options['convert_format'];
+		}
+
 		// If conversion is requested, use that format.
-		if ( ! empty( $this->options['convert_format'] ) ) {
-			switch ( $this->options['convert_format'] ) {
+		if ( ! empty( $format ) ) {
+			switch ( $format ) {
 				case 'webp':
 					return 'image/webp';
 				case 'jpeg':
@@ -319,12 +338,44 @@ class Media_Importer {
 	 * @return string Filename.
 	 */
 	private function generate_filename( $image ) {
+		// Check if there's a custom filename for this specific image.
+		if ( isset( $image['custom_filename'] ) && ! empty( $image['custom_filename'] ) ) {
+			// Use custom filename - determine extension.
+			$extension = 'jpg';
+			
+			// Check for individual format setting.
+			if ( isset( $image['custom_format'] ) && ! empty( $image['custom_format'] ) ) {
+				$extension = $image['custom_format'];
+			} elseif ( ! empty( $this->options['convert_format'] ) ) {
+				$extension = $this->options['convert_format'];
+			} elseif ( isset( $image['filename'] ) ) {
+				$pathinfo = pathinfo( $image['filename'] );
+				$extension = isset( $pathinfo['extension'] ) ? $pathinfo['extension'] : 'jpg';
+			}
+			
+			// Ensure custom filename has correct extension.
+			$custom = $image['custom_filename'];
+			$pathinfo = pathinfo( $custom );
+			if ( isset( $pathinfo['extension'] ) ) {
+				// Has extension, replace it.
+				$custom = $pathinfo['filename'] . '.' . $extension;
+			} else {
+				// No extension, add it.
+				$custom = $custom . '.' . $extension;
+			}
+			
+			return sanitize_file_name( $custom );
+		}
+
 		$has_prefix = ! empty( $this->options['filename_prefix'] );
 		
 		// Determine file extension.
 		$extension = 'jpg';
 		
-		if ( ! empty( $this->options['convert_format'] ) ) {
+		// Check for individual format, then global.
+		if ( isset( $image['custom_format'] ) && ! empty( $image['custom_format'] ) ) {
+			$extension = $image['custom_format'];
+		} elseif ( ! empty( $this->options['convert_format'] ) ) {
 			// Use the conversion format extension.
 			$extension = $this->options['convert_format'];
 		} elseif ( isset( $image['filename'] ) ) {
@@ -367,20 +418,29 @@ class Media_Importer {
 	 * @param array $image         Image data.
 	 */
 	private function set_image_metadata( $attachment_id, $image ) {
-		// Determine alt text.
-		$alt = ! empty( $this->options['image_alt'] ) 
-			? $this->options['image_alt'] 
-			: ( isset( $image['alt'] ) ? $image['alt'] : '' );
+		// Determine alt text - prioritize: custom_alt > global image_alt > original alt.
+		$alt = '';
+		if ( isset( $image['custom_alt'] ) && ! empty( $image['custom_alt'] ) ) {
+			$alt = $image['custom_alt'];
+		} elseif ( ! empty( $this->options['image_alt'] ) ) {
+			$alt = $this->options['image_alt'];
+		} elseif ( isset( $image['alt'] ) ) {
+			$alt = $image['alt'];
+		}
 
 		if ( ! empty( $alt ) ) {
 			update_post_meta( $attachment_id, '_wp_attachment_image_alt', sanitize_text_field( $alt ) );
 		}
 
-		// Determine title.
-		$title = ! empty( $this->options['image_title'] ) 
-			? $this->options['image_title'] 
-			: ( isset( $image['alt'] ) ? $image['alt'] : '' );
-
+		// Determine title - prioritize: custom_title > global image_title > original alt.
+		$title = '';
+		if ( isset( $image['custom_title'] ) && ! empty( $image['custom_title'] ) ) {
+			$title = $image['custom_title'];
+		} elseif ( ! empty( $this->options['image_title'] ) ) {
+			$title = $this->options['image_title'];
+		} elseif ( isset( $image['alt'] ) ) {
+			$title = $image['alt'];
+		}
 		if ( ! empty( $title ) ) {
 			wp_update_post(
 				array(
