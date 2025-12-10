@@ -70,8 +70,6 @@ Each image can have individual settings that override global defaults:
 - ✅ Handles JavaScript-heavy sites (React, Vue, Angular)
 - ✅ Bypasses anti-bot protections
 - ✅ More reliable for protected content
-- ❌ Requires API key from firecrawl.dev
-- ❌ Costs money (API credits)
 
 ## Plugin Architecture
 
