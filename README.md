@@ -4,19 +4,74 @@ A WordPress plugin that scrapes images from websites using the Firecrawl API and
 
 ## Features
 
-- 🔥 Integration with Firecrawl API for robust web scraping
-- 🖼️ Automatic import of scraped images to WordPress media library
-- ⚙️ Configurable settings (API key, max images, timeout)
-- 🎨 Clean admin interface with real-time progress indicators
-- 🔒 Follows WordPress security best practices (nonces, sanitization, escaping)
-- 🏗️ Object-oriented architecture with proper namespacing
+- 🔥 **Dual Scraping Methods**: Choose between Simple Mode (free, direct HTML) or Firecrawl API (advanced, JavaScript-heavy sites)
+- 🖼️ **Automatic Image Import**: Import scraped images directly to WordPress media library
+- ✏️ **Per-Image Customization**: Edit individual settings for each image (filename, alt text, title, format, dimensions)
+- 🎛️ **Bulk Options**: Apply global settings to all images or customize each one individually
+- 📐 **Image Processing**: Convert formats (WebP, JPEG, PNG), resize to max width, compress to max file size
+- ☑️ **Selective Import**: Choose which images to import with checkboxes
+- 🎯 **CSS Class Targeting**: Optionally scrape only images with specific CSS classes
+- 🔒 **Security First**: Follows WordPress security best practices (nonces, sanitization, escaping)
+- 🏗️ **Clean Architecture**: Object-oriented design with proper namespacing
+- 📱 **Responsive UI**: Works on desktop and mobile devices
 
 ## Installation
 
 1. Clone or download this plugin to `wp-content/plugins/image-scraper/`
 2. Activate the plugin through the WordPress admin panel
 3. Navigate to "Image Scraper" → "Settings" in the admin menu
-4. Enter your Firecrawl API key
+4. **Choose your scraping method**:
+   - **Simple Mode** (default): Free, works for most websites, no API key needed
+   - **Firecrawl API**: For JavaScript-heavy sites, requires API key from [firecrawl.dev](https://firecrawl.dev)
+
+## Usage
+
+### Basic Workflow
+
+1. **Navigate** to "Image Scraper" in the WordPress admin menu
+2. **Enter URL** of the webpage containing images
+3. **Optional**: Target specific CSS class to scrape only certain images
+4. **Click "Start Scraping"** to fetch images
+5. **Review Preview**: See all found images in a grid
+6. **Customize Images** (optional):
+   - Click "Edit Settings" on any image to customize individually
+   - Or use global options at the bottom to apply settings to all images
+7. **Select Images**: Use checkboxes to choose which images to import
+8. **Configure Options**:
+   - Convert format (WebP, JPEG, PNG)
+   - Set maximum width (images larger will be resized)
+   - Set maximum file size (compress if needed)
+   - Add filename prefix
+   - Set alt text and title
+9. **Click "Add to Media Library"** to import selected images
+
+### Per-Image Settings
+
+Each image can have individual settings that override global defaults:
+
+- **Filename**: Custom filename for this specific image
+- **Alt Text**: SEO-friendly alt text
+- **Title**: Image title in media library
+- **Format**: Convert to WebP, JPEG, or PNG
+- **Max Width**: Resize if wider than specified (maintains aspect ratio)
+- **Max Size**: Compress to stay under file size limit (in KB)
+
+### Scraping Methods
+
+#### Simple Mode (Recommended)
+- ✅ Free - no API costs
+- ✅ Fast - direct HTTP requests
+- ✅ No API key required
+- ✅ Works for most standard websites
+- ❌ Cannot handle JavaScript-rendered content
+- ❌ May be blocked by anti-bot protections
+
+#### Firecrawl API Mode
+- ✅ Handles JavaScript-heavy sites (React, Vue, Angular)
+- ✅ Bypasses anti-bot protections
+- ✅ More reliable for protected content
+- ❌ Requires API key from firecrawl.dev
+- ❌ Costs money (API credits)
 
 ## Plugin Architecture
 
@@ -30,10 +85,14 @@ image-scraper/
 │   ├── class-loader.php          # Hooks/filters manager
 │   ├── class-activator.php       # Activation hooks
 │   ├── class-deactivator.php     # Deactivation hooks
-│   └── class-i18n.php            # Internationalization
+│   ├── class-i18n.php            # Internationalization
+│   ├── class-firecrawl-api.php   # Firecrawl API integration
+│   ├── class-html-scraper.php    # Simple Mode HTML scraper
+│   └── class-media-importer.php  # Image processing & import
 ├── admin/                         # Admin-specific functionality
 │   ├── class-admin.php           # Admin menu and pages
 │   ├── class-settings.php        # Settings API integration
+│   ├── class-ajax-handler.php    # AJAX request handlers
 │   ├── css/
 │   │   └── admin.css             # Admin styles
 │   ├── js/
@@ -51,8 +110,12 @@ All classes use the `Image_Scraper` namespace to avoid conflicts:
 
 - **`Image_Scraper\Core`** - Main plugin orchestrator, coordinates all components
 - **`Image_Scraper\Loader`** - Manages WordPress hooks/filters registration
+- **`Image_Scraper\Firecrawl_Api`** - Firecrawl API integration for advanced scraping
+- **`Image_Scraper\Html_Scraper`** - Simple Mode HTML scraper (no API needed)
+- **`Image_Scraper\Media_Importer`** - Image processing, format conversion, and media library import
 - **`Image_Scraper\Admin\Admin`** - Handles admin menu, pages, and asset loading
 - **`Image_Scraper\Admin\Settings`** - Settings API registration and sanitization
+- **`Image_Scraper\Admin\Ajax_Handler`** - AJAX request handlers for scraping and importing
 - **`Image_Scraper\Activator`** - Plugin activation logic
 - **`Image_Scraper\Deactivator`** - Plugin deactivation logic
 - **`Image_Scraper\I18n`** - Translation/localization support
@@ -70,9 +133,29 @@ All classes use the `Image_Scraper` namespace to avoid conflicts:
 The plugin stores settings in a single option: `image_scraper_settings`
 
 Available settings:
-- `firecrawl_api_key` (string) - Your Firecrawl API key
+- `scraping_method` (string) - Scraping method: 'simple' (default) or 'firecrawl'
+- `firecrawl_api_key` (string) - Your Firecrawl API key (only needed for Firecrawl mode)
 - `max_images` (int) - Maximum images per scrape (1-500, default: 50)
 - `timeout` (int) - API request timeout in seconds (5-300, default: 30)
+## Next Steps for Development
+
+### Potential Future Enhancements
+
+- Batch processing for multiple URLs
+- Background processing with WordPress cron for large scrapes
+- Schedule recurring scrapes
+- Custom taxonomy for scraped images
+- Import/export settings
+- WP-CLI commands for automation
+- Srcset support for responsive images
+- Image gallery creation from scraped images
+- Auto-detection of lazy-loaded images (already partially supported)
+- API for third-party integrationsrsion, resizing, compression
+   - Returns success/error count
+   
+3. **`image_scraper_validate_api`** - Test Firecrawl API key
+   - Only available in Firecrawl mode
+   - Validates API connectivity
 
 ## Next Steps for Development
 
@@ -95,15 +178,16 @@ Available settings:
    - Handle duplicate detection
    - Set proper image metadata (alt text, title, caption)
 
-4. **Add Error Handling & Logging**
-   - Create error/success message system
-   - Log API failures for debugging
-   - User-friendly error messages
+## Firecrawl API Integration (Optional)
 
-5. **Add Image Filtering Options**
-   - Minimum image dimensions
-   - Exclude certain file types
-   - Duplicate detection before import
+The plugin can optionally use the Firecrawl API for advanced web scraping:
+
+- **When to use**: JavaScript-heavy sites, SPAs, protected content
+- **Authentication**: API key in request headers
+- **Documentation**: https://docs.firecrawl.dev
+- **Getting started**: Sign up at https://firecrawl.dev
+
+The plugin works perfectly fine without Firecrawl using Simple Mode for standard HTML websites.
 
 ### Future Enhancements
 
@@ -168,7 +252,7 @@ lando wp option patch update image_scraper_settings firecrawl_api_key "your-api-
 ## License
 
 GPL v2 or later
-
 ## Author
 
+James Welbes - https://jameswelbes.com
 Your Name (customize in `image-scraper.php`)
